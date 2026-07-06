@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
+import 'screens/todo_list_screen.dart';
 
 void main() {
+  // Initialisation obligatoire des liaisons système pour SQLite
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -18,7 +21,12 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.indigo,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
       ),
-      home: const LoginScreen(),
+      // Définit le point d'entrée unique de l'application via les routes
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const LoginScreen(),
+        '/notes': (context) => const TodoListScreen(),
+      },
     );
   }
 }
