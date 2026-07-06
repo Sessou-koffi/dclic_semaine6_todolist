@@ -16,10 +16,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshNotes(); // Charge les notes au démarrage de l'écran
+    _refreshNotes();
   }
 
-  // Fonction pour rafraîchir la liste depuis SQLite
   Future<void> _refreshNotes() async {
     setState(() => _isLoading = true);
     final data = await DatabaseHelper.instance.readAllNotes();
@@ -29,7 +28,6 @@ class _TodoListScreenState extends State<TodoListScreen> {
     });
   }
 
-  // Fonction de suppression (Étape 4 de votre énoncé)
   Future<void> _deleteNote(int id) async {
     await DatabaseHelper.instance.deleteNote(id);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -38,7 +36,104 @@ class _TodoListScreenState extends State<TodoListScreen> {
         backgroundColor: Colors.orange,
       ),
     );
-    _refreshNotes(); // Met à jour l'affichage
+    _refreshNotes();
+  }
+
+  // Affiche la boîte de dialogue pour créer OU modifier une note
+  void _showFormDialog(Note? note) {
+    final titleController = TextEditingController();
+    final contentController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    // Si on édite une note existante, on pré-remplit les champs
+    if (note != null) {
+      titleController.text = note.title;
+      contentController.text = note.content;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // L'utilisateur doit cliquer sur un bouton pour fermer
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          note == null ? 'Ajouter une note' : 'Modifier la note',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+        ),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Titre',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (val) => val == null || val.trim().isEmpty ? 'Le titre est obligatoire' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: contentController,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Contenu',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (val) => val == null || val.trim().isEmpty ? 'Le contenu est obligatoire' : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          // Bouton d'annulation (Directive Ergonomie)
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler', style: TextStyle(color: Colors.grey)),
+          ),
+          // Bouton de sauvegarde (Directive Ergonomie)
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                final inputTitle = titleController.text.trim();
+                final inputContent = contentController.text.trim();
+
+                if (note == null) {
+                  // Mode création
+                  await DatabaseHelper.instance.createNote(
+                    Note(title: inputTitle, content: inputContent),
+                  );
+                } else {
+                  // Mode édition
+                  await DatabaseHelper.instance.updateNote(
+                    Note(id: note.id, title: inputTitle, content: inputContent),
+                  );
+                }
+
+                if (mounted) {
+                  Navigator.pop(context); // Ferme la boîte de dialogue
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(note == null ? 'Note ajoutée !' : 'Note mise à jour !'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  _refreshNotes(); // Rafraîchit l'affichage en arrière-plan
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sauvegarder'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -52,7 +147,6 @@ class _TodoListScreenState extends State<TodoListScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
-              // Retour à la page de connexion
               Navigator.pushReplacementNamed(context, '/');
             },
           ),
@@ -80,7 +174,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   itemBuilder: (context, index) {
                     final note = _notes[index];
                     return Card(
-                      elevation: 3,
+                      elevation: 2,
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -103,7 +197,6 @@ class _TodoListScreenState extends State<TodoListScreen> {
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                           onPressed: () {
-                            // Dialogue de confirmation de suppression
                             showDialog(
                               context: context,
                               builder: (context) => AlertDialog(
@@ -127,16 +220,18 @@ class _TodoListScreenState extends State<TodoListScreen> {
                           },
                         ),
                         onTap: () {
-                          // Nous lierons l'édition ici à l'étape suivante
+                          // Action au clic sur une note existante : Édition
+                          _showFormDialog(note);
                         },
                       ),
                     );
                   },
                 ),
-      // Bouton d'ajout facilement identifiable (Flottant)
+      // Bouton d'ajout facilement identifiable
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Nous lierons l'ajout ici à l'étape suivante
+          // Action au clic sur le bouton + : Ajout
+          _showFormDialog(null);
         },
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
