@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'todo_list_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,12 +20,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Simulation d'une vérification d'identifiants
       if (username == 'admin' && password == '1234') {
-        // Succès : Nous afficherons la liste des notes ici à l'étape suivante
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Connexion réussie !'),
-            backgroundColor: Colors.green,
-          ),
+        // Redirection vers l'écran de la liste des notes
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const TodoListScreen()),
         );
       } else {
         // Échec : Message d'erreur clair et précis
